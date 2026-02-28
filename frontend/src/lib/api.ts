@@ -24,6 +24,10 @@ export function getImages() {
   return request("/cvat/images");
 }
 
+export function getAnnotations(imageId: number) {
+  return request(`/cvat/annotations/${imageId}`);
+}
+
 export function getFrameUrl(taskId: number, frame: number): string {
   return `${API_URL}/cvat/images/${taskId}/frames/${frame}`;
 }
