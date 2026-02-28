@@ -3,11 +3,13 @@
 import { useState, useRef, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { getMapFeatures } from "@/lib/api";
-import type { MapFeatureCollection } from "@/lib/types";
+import { getMapFeatures, getHeatmapData } from "@/lib/api";
+import type { MapFeatureCollection, HeatmapResponse, HeatmapPoint } from "@/lib/types";
 import Raccoon from "@/components/Raccoon";
 
 const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
+
+type ViewMode = "geojson" | "heatmap";
 
 function deriveStats(geojson: MapFeatureCollection) {
   const features = geojson.features.length;
@@ -28,7 +30,24 @@ function MapContent() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Heatmap state
+  const [heatmapData, setHeatmapData] = useState<HeatmapResponse | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>("heatmap");
+
   useEffect(() => {
+    // Auto-load heatmap on mount
+    getHeatmapData()
+      .then((data) => {
+        const hm = data as HeatmapResponse;
+        if (hm.points.length > 0) {
+          setHeatmapData(hm);
+          setViewMode("heatmap");
+        }
+      })
+      .catch(() => {
+        // Origin not set or no data — leave empty
+      });
+
     const id = searchParams.get("id");
     if (id) {
       loadMap(parseInt(id));
@@ -41,6 +60,7 @@ function MapContent() {
     try {
       const data = (await getMapFeatures(id)) as MapFeatureCollection;
       setGeojson(data);
+      setViewMode("geojson");
     } catch (err) {
       console.error(err);
       alert("Failed to load map data — ensure image is analyzed and georeferenced.");
@@ -68,6 +88,7 @@ function MapContent() {
           return;
         }
         setGeojson(parsed as MapFeatureCollection);
+        setViewMode("geojson");
       } catch {
         setUploadError("Could not parse file — make sure it's valid JSON.");
       }
@@ -77,10 +98,29 @@ function MapContent() {
   }
 
   const stats = geojson ? deriveStats(geojson) : null;
+  const hasHeatmap = heatmapData && heatmapData.points.length > 0;
+  const hasGeojson = geojson && geojson.features.length > 0;
+  const canToggle = hasHeatmap && hasGeojson;
+
+  // Derive heatmap stats
+  const heatmapStats = heatmapData
+    ? {
+        annotatedImages: heatmapData.points.length,
+        totalGeoreferenced: heatmapData.total_images_georeferenced,
+        totalWeightKg:
+          heatmapData.points.reduce((sum, p) => sum + p.total_weight_g, 0) / 1000,
+      }
+    : null;
+
+  // Determine what to pass to MapView
+  const activeHeatmapPoints: HeatmapPoint[] | null =
+    viewMode === "heatmap" && hasHeatmap ? heatmapData.points : null;
+  const activeGeojson: MapFeatureCollection | null =
+    viewMode === "geojson" ? geojson : null;
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Controls */}
+      {/* Single Image + View Toggle Controls */}
       <div className="flex flex-wrap items-center gap-3">
         <input
           type="number"
@@ -117,18 +157,64 @@ function MapContent() {
           <span className="text-xs text-red-500">{uploadError}</span>
         )}
 
-        {geojson && (
+        {/* View mode toggle */}
+        {canToggle && (
+          <div className="ml-auto flex overflow-hidden rounded-lg border border-gray-300 dark:border-gray-700">
+            <button
+              onClick={() => setViewMode("heatmap")}
+              className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                viewMode === "heatmap"
+                  ? "bg-purple-600 text-white"
+                  : "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+              }`}
+            >
+              Heatmap View
+            </button>
+            <button
+              onClick={() => setViewMode("geojson")}
+              className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                viewMode === "geojson"
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+              }`}
+            >
+              Polygon View
+            </button>
+          </div>
+        )}
+
+        {(hasGeojson || hasHeatmap) && (
           <button
             onClick={() => router.push("/expedition")}
-            className="ml-auto rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+            className={`${canToggle ? "" : "ml-auto "}rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700`}
           >
             Plan Expedition →
           </button>
         )}
       </div>
 
-      {/* Stats bar */}
-      {stats && (
+      {/* Heatmap Stats */}
+      {viewMode === "heatmap" && heatmapStats && (
+        <div className="flex flex-wrap gap-4 rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 text-sm dark:border-purple-900 dark:bg-purple-950">
+          <span>
+            <span className="font-semibold">{heatmapStats.annotatedImages}</span>{" "}
+            <span className="text-gray-500">annotated images</span>
+          </span>
+          <span className="text-gray-300 dark:text-gray-700">|</span>
+          <span>
+            <span className="font-semibold">{heatmapStats.totalGeoreferenced}</span>{" "}
+            <span className="text-gray-500">total georeferenced</span>
+          </span>
+          <span className="text-gray-300 dark:text-gray-700">|</span>
+          <span>
+            <span className="font-semibold">{heatmapStats.totalWeightKg.toFixed(2)} kg</span>{" "}
+            <span className="text-gray-500">estimated total weight</span>
+          </span>
+        </div>
+      )}
+
+      {/* Polygon Stats */}
+      {viewMode === "geojson" && stats && (
         <div className="flex flex-wrap gap-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm dark:border-gray-800 dark:bg-gray-900">
           <span>
             <span className="font-semibold">{stats.features.toLocaleString()}</span>{" "}
@@ -150,10 +236,10 @@ function MapContent() {
       {/* Map + Raccoon */}
       <div className="flex gap-4" style={{ height: 520 }}>
         <div className="flex-[65] overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
-          <MapView geojson={geojson} />
+          <MapView geojson={activeGeojson} heatmapPoints={activeHeatmapPoints} />
         </div>
         <div className="flex-[35]">
-          <Raccoon mapContext={geojson} />
+          <Raccoon mapContext={geojson ?? heatmapData} />
         </div>
       </div>
     </div>

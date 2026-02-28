@@ -2,15 +2,22 @@
 
 import { useState, useRef, useEffect } from "react";
 import { chatWithAgent } from "@/lib/api";
-import type { MapFeatureCollection } from "@/lib/types";
+import type { MapFeatureCollection, HeatmapResponse } from "@/lib/types";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
 }
 
+function describeContext(ctx: MapFeatureCollection | HeatmapResponse): string {
+  if ("features" in ctx) {
+    return `${ctx.features.length} hotspots loaded`;
+  }
+  return `${ctx.points.length} annotated tiles loaded`;
+}
+
 interface Props {
-  mapContext: MapFeatureCollection | null;
+  mapContext: MapFeatureCollection | HeatmapResponse | null;
 }
 
 export default function Raccoon({ mapContext }: Props) {
@@ -73,7 +80,7 @@ export default function Raccoon({ mapContext }: Props) {
           <p className="text-sm font-semibold">Raccoon</p>
           <p className="text-xs text-gray-500">
             {mapContext
-              ? `${mapContext.features.length} hotspots loaded`
+              ? describeContext(mapContext)
               : "No map loaded yet"}
           </p>
         </div>

@@ -1,13 +1,26 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.routers import auth, cvat, analysis, map, planning, employees
+from app.services.cvat_service import load_from_disk as cvat_load_from_disk
+from app.services.geo_service import load_from_disk as geo_load_from_disk
+
+
+@asynccontextmanager
+async def lifespan(app):
+    cvat_load_from_disk()
+    geo_load_from_disk()
+    yield
+
 
 app = FastAPI(
     title="Cleanly API",
     description="Ocean plastic pollution mapping & expedition planning",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(

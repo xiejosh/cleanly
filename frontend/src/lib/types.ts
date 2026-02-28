@@ -85,6 +85,26 @@ export interface Employee {
   available: boolean;
 }
 
+export interface HeatmapPoint {
+  image_id: number;
+  image_name: string;
+  lat: number;
+  lng: number;
+  annotation_count: number;
+  total_weight_g: number;
+}
+
+export interface HeatmapResponse {
+  origin: { lat: number; lng: number };
+  points: HeatmapPoint[];
+  total_images_georeferenced: number;
+}
+
+export interface GeorefInfo {
+  georefs: Record<number, { lat: number; lng: number }>;
+  origin: { lat: number; lng: number } | null;
+}
+
 export interface DashboardSummary {
   total_area_m2: number;
   total_weight_kg: number;
