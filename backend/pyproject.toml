@@ -1,0 +1,25 @@
+[project]
+name = "cleanly-backend"
+version = "0.1.0"
+description = "Cleanly - Ocean plastic pollution mapping & expedition planning API"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "httpx>=0.27.0",
+    "cvat-sdk>=2.14.0",
+    "supabase>=2.0",
+    "openai>=1.50.0",
+    "shapely>=2.0",
+    "geojson>=3.1",
+    "python-multipart>=0.0.9",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.7.0",
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+]
