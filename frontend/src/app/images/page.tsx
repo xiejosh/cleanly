@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { syncCvat } from "@/lib/api";
 import type { CvatSyncResponse, CvatImage } from "@/lib/types";
 
@@ -59,6 +60,12 @@ export default function ImagesPage() {
               <p className="text-sm text-gray-500">
                 {img.width} x {img.height} &middot; Task {img.task_id}
               </p>
+              <Link
+                href={`/analysis?id=${img.id}`}
+                className="mt-3 inline-block rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+              >
+                Analyze →
+              </Link>
             </div>
           ))}
         </div>
