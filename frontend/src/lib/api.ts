@@ -88,9 +88,17 @@ export function getDashboardSummary() {
 }
 
 // --- Raccoon Agent ---
-export function chatWithAgent(message: string, mapContext: unknown) {
+export function chatWithAgent(
+  message: string,
+  mapContext: unknown,
+  history?: { role: string; content: string }[]
+) {
   return request("/agent/chat", {
     method: "POST",
-    body: JSON.stringify({ message, map_context: mapContext }),
+    body: JSON.stringify({
+      message,
+      map_context: mapContext,
+      history: history ?? null,
+    }),
   });
 }

@@ -85,12 +85,47 @@ export interface Employee {
   available: boolean;
 }
 
+export interface ItineraryStop {
+  id: number;
+  label: string;
+  lat: number;
+  lng: number;
+  weight_g: number;
+  pixel_area: number | null;
+}
+
+export interface HeatmapCell {
+  row: number;
+  col: number;
+  lat: number;
+  lng: number;
+  density_g_per_m2: number;
+  weight_g: number;
+  annotation_count: number;
+}
+
+export interface ZoneSummary {
+  image_id: number;
+  image_name: string;
+  annotation_count: number;
+  area_cm2: number;
+  weight_g: number;
+  weight_kg: number;
+}
+
 export interface DashboardSummary {
+  total_area_cm2: number;
   total_area_m2: number;
+  total_weight_g: number;
   total_weight_kg: number;
   avg_density_g_per_cm2: number;
+  avg_density_g_per_m2: number;
   buried_estimate_kg: { low: number; high: number };
   hotspot_count: number;
   image_count: number;
+  annotation_count: number;
+  surveyed_area_m2: number;
+  zones: ZoneSummary[];
+  heatmap: HeatmapCell[];
   geojson: MapFeatureCollection;
 }

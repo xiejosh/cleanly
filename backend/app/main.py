@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import auth, cvat, analysis, map, planning, employees
+from app.routers import agent, auth, cvat, analysis, map, planning, employees
 
 app = FastAPI(
     title="Cleanly API",
@@ -18,6 +18,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(agent.router)
 app.include_router(auth.router)
 app.include_router(cvat.router)
 app.include_router(analysis.router)
