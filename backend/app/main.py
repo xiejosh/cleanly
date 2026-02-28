@@ -4,17 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import auth, cvat, analysis, map, planning, employees
-from app.services.cvat_service import load_from_disk as cvat_load_from_disk
-from app.services.geo_service import load_from_disk as geo_load_from_disk
-
-
-@asynccontextmanager
-async def lifespan(app):
-    cvat_load_from_disk()
-    geo_load_from_disk()
-    yield
-
+from app.routers import agent, auth, cvat, analysis, map, planning, employees
 
 app = FastAPI(
     title="Cleanly API",
@@ -31,6 +21,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(agent.router)
 app.include_router(auth.router)
 app.include_router(cvat.router)
 app.include_router(analysis.router)
