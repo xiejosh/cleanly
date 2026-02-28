@@ -3,40 +3,13 @@
 import { useState, useRef, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { getMapFeatures } from "@/lib/api";
-import type { MapFeatureCollection } from "@/lib/types";
+import { getMapFeatures, getHeatmapData } from "@/lib/api";
+import type { MapFeatureCollection, HeatmapResponse, HeatmapPoint } from "@/lib/types";
 import Raccoon from "@/components/Raccoon";
 
 const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
 
-function MapIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="10" r="3" />
-      <path d="M12 2a8 8 0 0 0-8 8c0 5.4 7 11.5 7.3 11.8a1 1 0 0 0 1.4 0C13 21.5 20 15.4 20 10a8 8 0 0 0-8-8z" />
-    </svg>
-  );
-}
-
-function UploadIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="17 8 12 3 7 8" />
-      <line x1="12" y1="3" x2="12" y2="15" />
-    </svg>
-  );
-}
-
-function GlobeIcon() {
-  return (
-    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-ocean">
-      <circle cx="12" cy="12" r="10" />
-      <path d="M2 12h20" />
-      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-    </svg>
-  );
-}
+type ViewMode = "geojson" | "heatmap";
 
 function deriveStats(geojson: MapFeatureCollection) {
   const features = geojson.features.length;
@@ -57,7 +30,24 @@ function MapContent() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Heatmap state
+  const [heatmapData, setHeatmapData] = useState<HeatmapResponse | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>("heatmap");
+
   useEffect(() => {
+    // Auto-load heatmap on mount
+    getHeatmapData()
+      .then((data) => {
+        const hm = data as HeatmapResponse;
+        if (hm.points.length > 0) {
+          setHeatmapData(hm);
+          setViewMode("heatmap");
+        }
+      })
+      .catch(() => {
+        // Origin not set or no data — leave empty
+      });
+
     const id = searchParams.get("id");
     if (id) {
       loadMap(parseInt(id));
@@ -70,6 +60,7 @@ function MapContent() {
     try {
       const data = (await getMapFeatures(id)) as MapFeatureCollection;
       setGeojson(data);
+      setViewMode("geojson");
     } catch (err) {
       console.error(err);
       alert("Failed to load map data — ensure image is analyzed and georeferenced.");
@@ -97,6 +88,7 @@ function MapContent() {
           return;
         }
         setGeojson(parsed as MapFeatureCollection);
+        setViewMode("geojson");
       } catch {
         setUploadError("Could not parse file — make sure it's valid JSON.");
       }
@@ -106,40 +98,44 @@ function MapContent() {
   }
 
   const stats = geojson ? deriveStats(geojson) : null;
+  const hasHeatmap = heatmapData && heatmapData.points.length > 0;
+  const hasGeojson = geojson && geojson.features.length > 0;
+  const canToggle = hasHeatmap && hasGeojson;
+
+  // Derive heatmap stats
+  const heatmapStats = heatmapData
+    ? {
+        annotatedImages: heatmapData.points.length,
+        totalGeoreferenced: heatmapData.total_images_georeferenced,
+        totalWeightKg:
+          heatmapData.points.reduce((sum, p) => sum + p.total_weight_g, 0) / 1000,
+      }
+    : null;
+
+  // Determine what to pass to MapView
+  const activeHeatmapPoints: HeatmapPoint[] | null =
+    viewMode === "heatmap" && hasHeatmap ? heatmapData.points : null;
+  const activeGeojson: MapFeatureCollection | null =
+    viewMode === "geojson" ? geojson : null;
 
   return (
-    <div className="flex flex-col gap-5">
-      {/* Load data panel */}
-      <div className="mx-auto w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-navy-mid/60 dark:bg-navy-light">
-        <p className="mb-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-          Load Map Data
-        </p>
-        <div className="flex items-center gap-2">
-          <input
-            type="number"
-            placeholder="Image ID"
-            value={imageId}
-            onChange={(e) => setImageId(e.target.value)}
-            className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-ocean focus:outline-none focus:ring-1 focus:ring-ocean dark:border-navy-mid dark:bg-navy-light dark:text-gray-100"
-          />
-          <button
-            onClick={handleLoad}
-            disabled={loading || !imageId}
-            className="flex shrink-0 items-center gap-2 rounded-lg bg-ocean px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-ocean-dark disabled:opacity-50"
-          >
-            {loading ? (
-              <>
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                Loading...
-              </>
-            ) : (
-              <>
-                <MapIcon />
-                Load Map
-              </>
-            )}
-          </button>
-        </div>
+    <div className="flex flex-col gap-4">
+      {/* Single Image + View Toggle Controls */}
+      <div className="flex flex-wrap items-center gap-3">
+        <input
+          type="number"
+          placeholder="Image ID"
+          value={imageId}
+          onChange={(e) => setImageId(e.target.value)}
+          className="rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+        />
+        <button
+          onClick={handleLoad}
+          disabled={loading || !imageId}
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+        >
+          {loading ? "Loading..." : "Load Map"}
+        </button>
 
         <div className="mt-3 flex items-center gap-3">
           <div className="h-px flex-1 bg-gray-200 dark:bg-navy-mid/40" />
@@ -163,13 +159,68 @@ function MapContent() {
         </button>
 
         {uploadError && (
-          <p className="mt-2 text-center text-xs text-coral">{uploadError}</p>
+          <span className="text-xs text-red-500">{uploadError}</span>
+        )}
+
+        {/* View mode toggle */}
+        {canToggle && (
+          <div className="ml-auto flex overflow-hidden rounded-lg border border-gray-300 dark:border-gray-700">
+            <button
+              onClick={() => setViewMode("heatmap")}
+              className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                viewMode === "heatmap"
+                  ? "bg-purple-600 text-white"
+                  : "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+              }`}
+            >
+              Heatmap View
+            </button>
+            <button
+              onClick={() => setViewMode("geojson")}
+              className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                viewMode === "geojson"
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+              }`}
+            >
+              Polygon View
+            </button>
+          </div>
+        )}
+
+        {(hasGeojson || hasHeatmap) && (
+          <button
+            onClick={() => router.push("/expedition")}
+            className={`${canToggle ? "" : "ml-auto "}rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700`}
+          >
+            Plan Expedition →
+          </button>
         )}
       </div>
 
-      {/* Stats bar + expedition CTA */}
-      {stats && (
-        <div className="flex flex-wrap items-center justify-center gap-6 rounded-xl border border-ocean/20 bg-ocean/10 px-5 py-3 text-sm">
+      {/* Heatmap Stats */}
+      {viewMode === "heatmap" && heatmapStats && (
+        <div className="flex flex-wrap gap-4 rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 text-sm dark:border-purple-900 dark:bg-purple-950">
+          <span>
+            <span className="font-semibold">{heatmapStats.annotatedImages}</span>{" "}
+            <span className="text-gray-500">annotated images</span>
+          </span>
+          <span className="text-gray-300 dark:text-gray-700">|</span>
+          <span>
+            <span className="font-semibold">{heatmapStats.totalGeoreferenced}</span>{" "}
+            <span className="text-gray-500">total georeferenced</span>
+          </span>
+          <span className="text-gray-300 dark:text-gray-700">|</span>
+          <span>
+            <span className="font-semibold">{heatmapStats.totalWeightKg.toFixed(2)} kg</span>{" "}
+            <span className="text-gray-500">estimated total weight</span>
+          </span>
+        </div>
+      )}
+
+      {/* Polygon Stats */}
+      {viewMode === "geojson" && stats && (
+        <div className="flex flex-wrap gap-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm dark:border-gray-800 dark:bg-gray-900">
           <span>
             <span className="font-bold text-navy dark:text-gray-100">
               {stats.features.toLocaleString()}
@@ -213,11 +264,11 @@ function MapContent() {
 
       {/* Map + Raccoon — always visible */}
       <div className="flex gap-4" style={{ height: 520 }}>
-        <div className="flex-[65] overflow-hidden rounded-2xl border border-gray-200 shadow-sm dark:border-navy-mid/60">
-          <MapView geojson={geojson} />
+        <div className="flex-[65] overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
+          <MapView geojson={activeGeojson} heatmapPoints={activeHeatmapPoints} />
         </div>
         <div className="flex-[35]">
-          <Raccoon mapContext={geojson} />
+          <Raccoon mapContext={geojson ?? heatmapData} />
         </div>
       </div>
     </div>

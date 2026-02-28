@@ -2,16 +2,22 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { chatWithAgent } from "@/lib/api";
-import type { DashboardSummary, MapFeatureCollection } from "@/lib/types";
+import type { MapFeatureCollection, HeatmapResponse } from "@/lib/types";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
 }
 
+function describeContext(ctx: MapFeatureCollection | HeatmapResponse): string {
+  if ("features" in ctx) {
+    return `${ctx.features.length} hotspots loaded`;
+  }
+  return `${ctx.points.length} annotated tiles loaded`;
+}
+
 interface Props {
-  mapContext?: MapFeatureCollection | null;
-  dashboardData?: DashboardSummary | null;
+  mapContext: MapFeatureCollection | HeatmapResponse | null;
 }
 
 const INITIAL_MESSAGE: Message = {
@@ -199,12 +205,10 @@ export default function Raccoon({ mapContext, dashboardData }: Props) {
         <span className="text-xl">🦝</span>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold">Raccoon</p>
-          <p className="truncate text-xs text-gray-500 dark:text-gray-400">
-            {hasData
-              ? `${dashboardData.annotation_count} annotations across ${dashboardData.image_count} images`
-              : mapContext && mapContext.features.length > 0
-                ? `${mapContext.features.length} features loaded`
-                : "No data loaded yet"}
+          <p className="text-xs text-gray-500">
+            {mapContext
+              ? describeContext(mapContext)
+              : "No map loaded yet"}
           </p>
         </div>
         <span
