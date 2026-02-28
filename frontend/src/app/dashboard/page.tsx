@@ -15,13 +15,18 @@ interface StatCardProps {
   accent?: string;
 }
 
-function StatCard({ label, value, sub, accent = "bg-blue-50 dark:bg-blue-950" }: StatCardProps) {
+function StatCard({
+  label,
+  value,
+  sub,
+  accent = "bg-ocean/10 dark:bg-ocean/10",
+}: StatCardProps) {
   return (
-    <div className={`rounded-xl border border-gray-200 p-5 dark:border-gray-800 ${accent}`}>
-      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+    <div className={`rounded-2xl border border-gray-200 p-5 shadow-sm dark:border-navy-mid/60 ${accent}`}>
+      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
         {label}
       </p>
-      <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
+      <p className="text-2xl font-bold text-navy dark:text-gray-100">{value}</p>
       {sub && <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{sub}</p>}
     </div>
   );
@@ -44,60 +49,58 @@ export default function DashboardPage() {
       <div>
         <h1 className="text-2xl font-bold">Mission Dashboard</h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Aggregated plastic survey data across all processed drone imagery.
+          Live overview of plastic survey data across all processed drone imagery.
         </p>
       </div>
 
       {loading && (
-        <p className="text-sm text-gray-500">Loading mission data...</p>
+        <div className="flex items-center gap-3 py-8 text-gray-500">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-ocean/30 border-t-ocean" />
+          <p className="text-sm">Loading mission data...</p>
+        </div>
       )}
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-400">
+        <div className="rounded-xl border border-coral/30 bg-coral/10 px-4 py-4 text-sm text-coral dark:text-coral-light">
           {error}
         </div>
       )}
 
       {data && (
         <>
-          {/* Stats grid */}
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatCard
-              label="Total Plastic & Product Area"
+              label="Total Plastic Area"
               value={`${data.total_area_m2.toFixed(1)} m²`}
               sub={`${data.total_weight_kg.toFixed(1)} kg estimated weight`}
-              accent="bg-blue-50 dark:bg-blue-950"
+              accent="bg-ocean/10 dark:bg-ocean/10"
             />
             <StatCard
               label="Avg Plastic Density"
               value={`${data.avg_density_g_per_cm2.toFixed(3)} g/cm²`}
               sub="Surface density across surveyed area"
-              accent="bg-violet-50 dark:bg-violet-950"
+              accent="bg-ocean-light/10 dark:bg-ocean-light/10"
             />
             <StatCard
               label="Buried Plastic Estimate"
               value={`${data.buried_estimate_kg.low}–${data.buried_estimate_kg.high} kg`}
               sub="Estimated plastic invisible to drone"
-              accent="bg-amber-50 dark:bg-amber-950"
+              accent="bg-coral-light/15 dark:bg-coral-light/10"
             />
             <StatCard
               label="Hotspots Detected"
               value={data.hotspot_count.toLocaleString()}
               sub={`Across ${data.image_count} images`}
-              accent="bg-emerald-50 dark:bg-emerald-950"
+              accent="bg-emerald-500/10 dark:bg-emerald-500/10"
             />
           </div>
 
-          {/* Map + Raccoon */}
           <div className="flex gap-4" style={{ height: 520 }}>
-            {/* Heatmap */}
-            <div className="flex-[65] overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
+            <div className="flex-[65] overflow-hidden rounded-2xl border border-gray-200 shadow-sm dark:border-navy-mid/60">
               <MapView geojson={data.geojson} />
             </div>
-
-            {/* Raccoon */}
             <div className="flex-[35]">
-              <Raccoon mapContext={data.geojson} />
+              <Raccoon mapContext={data.geojson} dashboardData={data} />
             </div>
           </div>
         </>
