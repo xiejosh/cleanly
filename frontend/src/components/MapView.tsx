@@ -70,11 +70,13 @@ function PolygonLegend() {
         bottom: 24,
         left: 12,
         zIndex: 1000,
-        background: "rgba(255,255,255,0.92)",
+        background: isDark ? "rgba(13,27,42,0.92)" : "rgba(255,255,255,0.92)",
+        color: isDark ? "#e2e8f0" : "#0d1b2a",
         borderRadius: 8,
         padding: "8px 12px",
         fontSize: 12,
-        boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
+        boxShadow: isDark ? "0 1px 4px rgba(0,0,0,0.5)" : "0 1px 4px rgba(0,0,0,0.2)",
+        border: isDark ? "1px solid rgba(39,64,96,0.5)" : "1px solid rgba(0,0,0,0.08)",
         pointerEvents: "none",
       }}
     >
@@ -92,7 +94,7 @@ function PolygonLegend() {
               height: 14,
               borderRadius: 3,
               background: color,
-              border: "1px solid rgba(0,0,0,0.15)",
+              border: isDark ? "1px solid rgba(255,255,255,0.15)" : "1px solid rgba(0,0,0,0.15)",
             }}
           />
           <span>{label}</span>

@@ -137,7 +137,11 @@ function MapContent() {
           {loading ? "Loading..." : "Load Map"}
         </button>
 
-        <span className="text-xs text-gray-400">or</span>
+        <div className="mt-3 flex items-center gap-3">
+          <div className="h-px flex-1 bg-gray-200 dark:bg-navy-mid/40" />
+          <span className="text-xs text-gray-400">or</span>
+          <div className="h-px flex-1 bg-gray-200 dark:bg-navy-mid/40" />
+        </div>
 
         <input
           ref={fileInputRef}
@@ -148,9 +152,10 @@ function MapContent() {
         />
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:border-blue-400 hover:text-blue-600 dark:border-gray-700 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:text-blue-400"
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:border-ocean hover:text-ocean dark:border-navy-mid dark:text-gray-300 dark:hover:border-ocean dark:hover:text-ocean-light"
         >
-          Upload JSON
+          <UploadIcon />
+          Upload GeoJSON File
         </button>
 
         {uploadError && (
@@ -217,23 +222,47 @@ function MapContent() {
       {viewMode === "geojson" && stats && (
         <div className="flex flex-wrap gap-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm dark:border-gray-800 dark:bg-gray-900">
           <span>
-            <span className="font-semibold">{stats.features.toLocaleString()}</span>{" "}
+            <span className="font-bold text-navy dark:text-gray-100">
+              {stats.features.toLocaleString()}
+            </span>{" "}
             <span className="text-gray-500">hotspots</span>
           </span>
-          <span className="text-gray-300 dark:text-gray-700">|</span>
+          <span className="text-gray-300 dark:text-navy-mid">|</span>
           <span>
-            <span className="font-semibold">{stats.totalWeightKg.toFixed(2)} kg</span>{" "}
+            <span className="font-bold text-navy dark:text-gray-100">
+              {stats.totalWeightKg.toFixed(2)} kg
+            </span>{" "}
             <span className="text-gray-500">estimated weight</span>
           </span>
-          <span className="text-gray-300 dark:text-gray-700">|</span>
+          <span className="text-gray-300 dark:text-navy-mid">|</span>
           <span>
-            <span className="font-semibold">{stats.totalAreaM2.toFixed(2)} m²</span>{" "}
+            <span className="font-bold text-navy dark:text-gray-100">
+              {stats.totalAreaM2.toFixed(2)} m²
+            </span>{" "}
             <span className="text-gray-500">total area</span>
           </span>
+          <button
+            onClick={() => router.push("/expedition")}
+            className="ml-auto rounded-lg bg-coral px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-coral/90"
+          >
+            Plan Expedition →
+          </button>
         </div>
       )}
 
-      {/* Map + Raccoon */}
+      {/* No-data notice */}
+      {!geojson && (
+        <div className="flex items-center gap-2 rounded-xl border border-coral-light/30 bg-coral-light/10 px-4 py-3 text-sm text-coral dark:text-coral-light">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          No live data loaded — load an image ID or upload GeoJSON above to populate the map and give Raccoon survey data to analyze.
+        </div>
+      )}
+
+      {/* Map + Raccoon — always visible */}
       <div className="flex gap-4" style={{ height: 520 }}>
         <div className="flex-[65] overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
           <MapView geojson={activeGeojson} heatmapPoints={activeHeatmapPoints} />
@@ -248,9 +277,23 @@ function MapContent() {
 
 export default function MapPage() {
   return (
-    <div>
-      <h1 className="mb-4 text-2xl font-bold">Trash Hotspot Map</h1>
-      <Suspense fallback={<p className="text-sm text-gray-500">Loading...</p>}>
+    <div className="flex flex-col gap-5">
+      {/* Header */}
+      <div className="text-center">
+        <h1 className="text-2xl font-bold">Trash Hotspot Map</h1>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          Visualize plastic hotspots and chat with Raccoon to plan your cleanup.
+        </p>
+      </div>
+
+      <Suspense
+        fallback={
+          <div className="flex items-center justify-center gap-3 py-8 text-gray-500">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-ocean/30 border-t-ocean" />
+            <p className="text-sm">Loading...</p>
+          </div>
+        }
+      >
         <MapContent />
       </Suspense>
     </div>

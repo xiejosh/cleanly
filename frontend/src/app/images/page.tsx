@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { syncCvat, getImages, getAnnotations, registerGlobalOrigin, getGeorefs } from "@/lib/api";
 import type { CvatSyncResponse, CvatImage, CvatAnnotation, GeorefInfo } from "@/lib/types";
 
-// Matches backend: 0.5 cm/px → 0.25 cm²/px, density 0.48 g/cm² → 0.12 g/px
 const WEIGHT_PER_PIXEL_G = 0.12;
 const AREA_PER_PIXEL_CM2 = 0.25;
 
@@ -14,6 +14,34 @@ interface ImageStats {
   areaCm2: number;
   weightG: number;
   weightKg: number;
+}
+
+function SyncIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 2v6h-6" />
+      <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+      <path d="M3 22v-6h6" />
+      <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+    </svg>
+  );
+}
+
+function DroneIcon() {
+  return (
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-ocean">
+      <path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
+      <path d="M4 8l2.1 2.1" />
+      <path d="M17.9 10.1L20 8" />
+      <path d="M4 16l2.1-2.1" />
+      <path d="M17.9 13.9L20 16" />
+      <circle cx="4" cy="8" r="2" />
+      <circle cx="20" cy="8" r="2" />
+      <circle cx="4" cy="16" r="2" />
+      <circle cx="20" cy="16" r="2" />
+      <path d="M9 12h6" />
+    </svg>
+  );
 }
 
 export default function ImagesPage() {
@@ -127,6 +155,9 @@ export default function ImagesPage() {
     return `${g.toFixed(1)} g`;
   }
 
+  const totalAnnotations = Object.values(stats).reduce((s, v) => s + v.annotationCount, 0);
+  const totalWeightG = Object.values(stats).reduce((s, v) => s + v.weightG, 0);
+
   return (
     <div>
       <h1 className="mb-4 text-2xl font-bold">CVAT Images</h1>
@@ -235,6 +266,9 @@ export default function ImagesPage() {
                         {formatWeight(s.weightG)}
                       </span>
                     </p>
+                    <span className="shrink-0 rounded-full bg-ocean/10 px-2 py-0.5 text-xs text-ocean-dark dark:text-ocean-light">
+                      #{img.id}
+                    </span>
                   </div>
                   {georefs[img.id] && (
                     <div className="mt-3 border-t border-gray-100 pt-3 text-xs text-gray-500 dark:border-gray-800">
