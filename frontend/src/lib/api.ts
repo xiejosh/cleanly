@@ -81,3 +81,16 @@ export function planExpedition(body: {
 export function getEmployees() {
   return request("/employees");
 }
+
+// --- Dashboard ---
+export function getDashboardSummary() {
+  return request("/dashboard/summary");
+}
+
+// --- Raccoon Agent ---
+export function chatWithAgent(message: string, mapContext: unknown) {
+  return request("/agent/chat", {
+    method: "POST",
+    body: JSON.stringify({ message, map_context: mapContext }),
+  });
+}

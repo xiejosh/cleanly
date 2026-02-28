@@ -1,19 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { runAnalysis } from "@/lib/api";
 import type { AnalysisResult } from "@/lib/types";
 
-export default function AnalysisPage() {
-  const [imageId, setImageId] = useState("");
+function AnalysisContent() {
+  const searchParams = useSearchParams();
+  const [imageId, setImageId] = useState(searchParams.get("id") ?? "");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function handleAnalyze() {
-    if (!imageId) return;
+  useEffect(() => {
+    const id = searchParams.get("id");
+    if (id) {
+      setImageId(id);
+      runAnalysisFor(parseInt(id));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function runAnalysisFor(id: number) {
     setLoading(true);
     try {
-      const data = (await runAnalysis(parseInt(imageId))) as AnalysisResult;
+      const data = (await runAnalysis(id)) as AnalysisResult;
       setResult(data);
     } catch (err) {
       console.error(err);
@@ -23,9 +34,13 @@ export default function AnalysisPage() {
     }
   }
 
+  async function handleAnalyze() {
+    if (!imageId) return;
+    await runAnalysisFor(parseInt(imageId));
+  }
+
   return (
-    <div>
-      <h1 className="mb-4 text-2xl font-bold">Image Analysis</h1>
+    <>
       <div className="mb-6 flex items-center gap-3">
         <input
           type="number"
@@ -51,15 +66,22 @@ export default function AnalysisPage() {
               label="Detected Pixels"
               value={result.total_detected_pixels.toLocaleString()}
             />
-            <Stat
-              label="Area"
-              value={`${result.area_cm2.toFixed(1)} cm²`}
-            />
+            <Stat label="Area" value={`${result.area_cm2.toFixed(1)} cm²`} />
             <Stat
               label="Est. Weight"
               value={`${result.estimated_weight_kg.toFixed(3)} kg`}
             />
           </div>
+
+          <div className="flex items-center gap-3">
+            <Link
+              href={`/map?id=${result.image_id}`}
+              className="inline-block rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+            >
+              View on Map →
+            </Link>
+          </div>
+
           <div>
             <h2 className="mb-2 text-lg font-semibold">Annotations</h2>
             <div className="space-y-2">
@@ -77,7 +99,7 @@ export default function AnalysisPage() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
@@ -86,6 +108,17 @@ function Stat({ label, value }: { label: string; value: string | number }) {
     <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
       <p className="text-sm text-gray-500">{label}</p>
       <p className="text-xl font-bold">{value}</p>
+    </div>
+  );
+}
+
+export default function AnalysisPage() {
+  return (
+    <div>
+      <h1 className="mb-4 text-2xl font-bold">Image Analysis</h1>
+      <Suspense fallback={<p className="text-sm text-gray-500">Loading...</p>}>
+        <AnalysisContent />
+      </Suspense>
     </div>
   );
 }

@@ -84,3 +84,13 @@ export interface Employee {
   skills: string[];
   available: boolean;
 }
+
+export interface DashboardSummary {
+  total_area_m2: number;
+  total_weight_kg: number;
+  avg_density_g_per_cm2: number;
+  buried_estimate_kg: { low: number; high: number };
+  hotspot_count: number;
+  image_count: number;
+  geojson: MapFeatureCollection;
+}
