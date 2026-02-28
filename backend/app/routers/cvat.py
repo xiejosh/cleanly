@@ -1,8 +1,8 @@
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
-from app.models.schemas import CvatImage, CvatSyncRequest, CvatSyncResponse
-from app.services.cvat_service import get_cached_images, get_frame_data, sync_cvat_data
+from app.models.schemas import CvatAnnotation, CvatImage, CvatSyncRequest, CvatSyncResponse
+from app.services.cvat_service import get_cached_annotations, get_cached_images, get_frame_data, sync_cvat_data
 
 router = APIRouter(prefix="/cvat", tags=["cvat"])
 
@@ -17,6 +17,12 @@ async def sync(request: CvatSyncRequest):
 async def list_images():
     """Return all previously synced images."""
     return list(get_cached_images().values())
+
+
+@router.get("/annotations/{image_id}", response_model=list[CvatAnnotation])
+async def list_annotations(image_id: int):
+    """Return cached annotations (with pixel areas) for a synced image."""
+    return get_cached_annotations(image_id)
 
 
 @router.get("/images/{task_id}/frames/{frame}")
