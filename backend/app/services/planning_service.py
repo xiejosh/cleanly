@@ -9,8 +9,12 @@ from app.models.schemas import (
     VesselRecommendation,
     EmployeeAssignment,
 )
-from app.services.analysis_service import get_all_results
+from app.services.cvat_service import get_cached_images, get_cached_annotations
 from app.services.employee_service import list_employees
+
+# Constants from spec (same as analysis_service)
+AREA_PER_PIXEL_CM2 = 0.25  # (0.5 cm/pixel)^2
+WEIGHT_PER_PIXEL_G = 0.12  # 0.25 cm^2 * 0.48 g/cm^2
 
 PLANNING_SYSTEM_PROMPT = """\
 You are an expedition planning agent for ocean plastic cleanup operations.
@@ -39,20 +43,23 @@ Return ONLY valid JSON matching this schema:
 
 async def generate_expedition_plan(request: PlanExpeditionRequest) -> ExpeditionPlan:
     """Use OpenAI to generate an expedition plan from analysis data + employee directory."""
-    results = get_all_results()
+    images = get_cached_images()
     employees = await list_employees()
 
-    # Aggregate metrics
+    # Aggregate metrics directly from persisted annotations
     total_weight_kg = 0.0
     total_area_cm2 = 0.0
     image_count = 0
 
-    target_ids = request.image_ids or list(results.keys())
+    target_ids = request.image_ids or list(images.keys())
     for iid in target_ids:
-        if iid in results:
-            total_weight_kg += results[iid].estimated_weight_kg
-            total_area_cm2 += results[iid].area_cm2
-            image_count += 1
+        annotations = get_cached_annotations(iid)
+        if not annotations:
+            continue
+        total_pixels = sum((ann.pixel_area or 0) for ann in annotations)
+        total_weight_kg += total_pixels * WEIGHT_PER_PIXEL_G / 1000.0
+        total_area_cm2 += total_pixels * AREA_PER_PIXEL_CM2
+        image_count += 1
 
     total_area_m2 = total_area_cm2 / 10_000
 

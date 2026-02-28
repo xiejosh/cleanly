@@ -4,6 +4,7 @@ from shapely.geometry import Polygon
 
 from app.config import settings
 from app.models.schemas import CvatImage, CvatAnnotation, CvatSyncResponse
+from app.services.store import load_json, save_json
 
 # In-memory cache of synced data (replace with DB later)
 _images: dict[int, CvatImage] = {}
@@ -78,6 +79,7 @@ async def sync_cvat_data(task_id: int | None = None) -> CvatSyncResponse:
             total_annotations += 1
 
     client.close()
+    _save_to_disk()
     return CvatSyncResponse(images=synced_images, annotations_count=total_annotations)
 
 
@@ -99,6 +101,26 @@ def get_cached_images() -> dict[int, CvatImage]:
 
 def get_cached_annotations(image_id: int) -> list[CvatAnnotation]:
     return _annotations.get(image_id, [])
+
+
+def load_from_disk() -> None:
+    """Restore _images and _annotations from db/cvat.json."""
+    data = load_json("cvat.json")
+    for k, v in data.get("images", {}).items():
+        _images[int(k)] = CvatImage(**v)
+    for k, anns in data.get("annotations", {}).items():
+        _annotations[int(k)] = [CvatAnnotation(**a) for a in anns]
+
+
+def _save_to_disk() -> None:
+    """Persist _images and _annotations to db/cvat.json."""
+    save_json("cvat.json", {
+        "images": {str(k): v.model_dump() for k, v in _images.items()},
+        "annotations": {
+            str(k): [a.model_dump() for a in anns]
+            for k, anns in _annotations.items()
+        },
+    })
 
 
 def get_frame_data(task_id: int, frame: int) -> tuple[bytes, str]:

@@ -65,6 +65,31 @@ export function registerGeoreference(
   });
 }
 
+export function registerGlobalOrigin(
+  lat: number,
+  lng: number,
+  resolution?: number
+) {
+  return request("/map/global-origin", {
+    method: "POST",
+    body: JSON.stringify({
+      lat,
+      lng,
+      ...(resolution !== undefined && {
+        ground_resolution_cm_per_pixel: resolution,
+      }),
+    }),
+  });
+}
+
+export function getGeorefs() {
+  return request("/map/georefs");
+}
+
+export function getHeatmapData() {
+  return request("/map/heatmap");
+}
+
 // --- Expedition Planning ---
 export function planExpedition(body: {
   image_ids?: number[];

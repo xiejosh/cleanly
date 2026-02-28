@@ -69,6 +69,27 @@ class GeoReferenceRequest(BaseModel):
     ground_resolution_cm_per_pixel: float = 0.5
 
 
+class GlobalOriginRequest(BaseModel):
+    lat: float
+    lng: float
+    ground_resolution_cm_per_pixel: float = 0.5
+
+
+class HeatmapPoint(BaseModel):
+    image_id: int
+    image_name: str
+    lat: float
+    lng: float
+    annotation_count: int
+    total_weight_g: float
+
+
+class HeatmapResponse(BaseModel):
+    origin: GeoCoordinate
+    points: list[HeatmapPoint]
+    total_images_georeferenced: int
+
+
 class MapFeature(BaseModel):
     type: str = "Feature"
     geometry: dict
