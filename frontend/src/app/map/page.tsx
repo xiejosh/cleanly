@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { getMapFeatures, getHeatmapData } from "@/lib/api";
@@ -24,11 +24,8 @@ function deriveStats(geojson: MapFeatureCollection) {
 function MapContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [imageId, setImageId] = useState(searchParams.get("id") ?? "");
   const [geojson, setGeojson] = useState<MapFeatureCollection | null>(null);
   const [loading, setLoading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Heatmap state
   const [heatmapData, setHeatmapData] = useState<HeatmapResponse | null>(null);
@@ -69,34 +66,6 @@ function MapContent() {
     }
   }
 
-  async function handleLoad() {
-    if (!imageId) return;
-    await loadMap(parseInt(imageId));
-  }
-
-  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadError(null);
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const parsed = JSON.parse(event.target?.result as string);
-        if (parsed.type !== "FeatureCollection" || !Array.isArray(parsed.features)) {
-          setUploadError("Invalid format — expected a GeoJSON FeatureCollection.");
-          return;
-        }
-        setGeojson(parsed as MapFeatureCollection);
-        setViewMode("geojson");
-      } catch {
-        setUploadError("Could not parse file — make sure it's valid JSON.");
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = "";
-  }
-
   const stats = geojson ? deriveStats(geojson) : null;
   const hasHeatmap = heatmapData && heatmapData.points.length > 0;
   const hasGeojson = geojson && geojson.features.length > 0;
@@ -120,48 +89,8 @@ function MapContent() {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Single Image + View Toggle Controls */}
+      {/* View Toggle Controls */}
       <div className="flex flex-wrap items-center gap-3">
-        <input
-          type="number"
-          placeholder="Image ID"
-          value={imageId}
-          onChange={(e) => setImageId(e.target.value)}
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
-        />
-        <button
-          onClick={handleLoad}
-          disabled={loading || !imageId}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          {loading ? "Loading..." : "Load Map"}
-        </button>
-
-        <div className="mt-3 flex items-center gap-3">
-          <div className="h-px flex-1 bg-gray-200 dark:bg-navy-mid/40" />
-          <span className="text-xs text-gray-400">or</span>
-          <div className="h-px flex-1 bg-gray-200 dark:bg-navy-mid/40" />
-        </div>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".json,application/json"
-          onChange={handleFileUpload}
-          className="hidden"
-        />
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:border-ocean hover:text-ocean dark:border-navy-mid dark:text-gray-300 dark:hover:border-ocean dark:hover:text-ocean-light"
-        >
-          <UploadIcon />
-          Upload GeoJSON File
-        </button>
-
-        {uploadError && (
-          <span className="text-xs text-red-500">{uploadError}</span>
-        )}
-
         {/* View mode toggle */}
         {canToggle && (
           <div className="ml-auto flex overflow-hidden rounded-lg border border-gray-300 dark:border-gray-700">
@@ -258,7 +187,7 @@ function MapContent() {
             <line x1="12" y1="8" x2="12" y2="12" />
             <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
-          No live data loaded — load an image ID or upload GeoJSON above to populate the map and give Raccoon survey data to analyze.
+          No live data loaded — sync and analyze images to populate the map and give Raccoon survey data to analyze.
         </div>
       )}
 

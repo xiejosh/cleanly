@@ -63,6 +63,8 @@ function FitBounds({
 }
 
 function PolygonLegend() {
+  const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
+
   return (
     <div
       style={{

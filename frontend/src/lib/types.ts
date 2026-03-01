@@ -113,7 +113,15 @@ export interface ZoneSummary {
   weight_kg: number;
 }
 
+export interface LabelBreakdown {
+  label: string;
+  count: number;
+  area_cm2: number;
+  weight_g: number;
+}
+
 export interface DashboardSummary {
+  total_annotations: number;
   total_area_cm2: number;
   total_area_m2: number;
   total_weight_g: number;
@@ -125,7 +133,7 @@ export interface DashboardSummary {
   image_count: number;
   annotation_count: number;
   surveyed_area_m2: number;
+  label_breakdown: LabelBreakdown[];
   zones: ZoneSummary[];
-  heatmap: HeatmapCell[];
   geojson: MapFeatureCollection;
 }
